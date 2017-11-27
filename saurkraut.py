@@ -9,27 +9,33 @@ from keras.layers import Dense, GRU
 import numpy as np
 
 
-class DinosaurGenerator:
+class NameGenerator:
+    """ A generator for names. """
+
     def __init__(self, filename=None):
+        """ Creates a new generator or loads a pretrained model. """
         if filename != None and Path(filename).is_file():
             self._model = load_model(filename)
         else:
             self._model = None
 
     def is_trained(self):
+        """ Checks if the generator is already trained. """
         return self._model != None
 
     def save(self, filename):
+        """ Save the geenrator in a specific folder. """
         if self._model != None:
             self._model.save(filename)
         else:
             raise ValueError('Generator is not trained!')
 
-    def train(self, dinosaur_names, epochs=40):
-        x, y = DinosaurGenerator._encode_strings(
-            DinosaurGenerator._generate_windows(dinosaur_names, 4))
-        x, y = (DinosaurGenerator._encode_categories(x),
-                DinosaurGenerator._encode_categories(y))
+    def train(self, names, epochs=40):
+        """ Trains the generator upon a list of names. """
+        x, y = NameGenerator._encode_strings(
+            NameGenerator._generate_windows(names, 4))
+        x, y = (NameGenerator._encode_categories(x),
+                NameGenerator._encode_categories(y))
 
         self._model = Sequential()
         self._model.add(GRU(x.shape[2], input_shape=(x.shape[1], x.shape[2])))
@@ -44,6 +50,7 @@ class DinosaurGenerator:
                         verbose=1)
 
     def generate(self, start, deterministic=False):
+        """ Generates a new name. """
         if self._model is None:
             raise ValueError('Generator is not trained!')
 
@@ -52,7 +59,7 @@ class DinosaurGenerator:
         while name[-1] != 0:
             current_fragment = np.array([name[-3:]])
             probabilities = self._model.predict(
-                DinosaurGenerator._encode_categories(current_fragment, 27))[0]
+                NameGenerator._encode_categories(current_fragment, 27))[0]
 
             if not deterministic:
                 most_likely = np.argsort(probabilities)[-3:][::-1]
@@ -65,6 +72,7 @@ class DinosaurGenerator:
 
     @staticmethod
     def _encode_categories(matrix, max_value=None):
+        """ Encode categories using One-Hot encoding. """
         max_value = max_value if max_value else matrix.max() + 1
         if matrix.ndim == 1:
             result = np.zeros((matrix.size, max_value), dtype=np.uint8)
@@ -77,6 +85,7 @@ class DinosaurGenerator:
 
     @staticmethod
     def _generate_windows(dataset, max_window_size):
+        """ Generates multi-sized windows out of a string. """
         result = []
         for current_win_size in range(2, max_window_size + 1):
             for data in dataset:
@@ -90,6 +99,7 @@ class DinosaurGenerator:
 
     @staticmethod
     def _encode_strings(dataset):
+        """ Encode strings as numbers. """
         x = np.zeros((len(dataset), len(dataset[0]) - 1), dtype=np.uint8)
         y = np.zeros((len(dataset)), dtype=np.uint8)
         for i, data in enumerate(dataset):
@@ -103,9 +113,9 @@ def read_file(filename):
         return [x.strip().lower() + ' ' for x in f.readlines()]
 
 
-generator = DinosaurGenerator('model.h5')
+generator = NameGenerator('Models/dinosaur.h5')
 if not generator.is_trained():
-    generator.train(read_file('dinosaur.txt'))
-    generator.save('model.h5')
+    generator.train(read_file('Data/dinosaur.txt'))
+    generator.save('Models/dinosaur.h5')
 
 generator.generate('a')
