@@ -39,13 +39,13 @@ class NameGenerator:
 
         self._model = Sequential()
         self._model.add(GRU(x.shape[2], input_shape=(x.shape[1], x.shape[2])))
-        self._model.add(Dense(x.shape[2], activation='relu'))
+        self._model.add(Dense(x.shape[2], activation='softmax'))
 
         self._model.compile(loss='categorical_crossentropy',
                             optimizer='adam',
                             metrics=['accuracy'])
 
-        self._model.fit(x, y, epochs=epochs,
+        self._model.fit(x, y.astype(np.float_), epochs=epochs,
                         batch_size=32,
                         verbose=1)
 
@@ -108,14 +108,15 @@ class NameGenerator:
         return (x, y)
 
 
-def read_file(filename):
-    with open(filename) as f:
-        return [x.strip().lower() + ' ' for x in f.readlines()]
+if __name__ == "__main__":
+    def read_file(filename):
+        with open(filename) as f:
+            return [x.strip().lower() + ' ' for x in f.readlines()]
 
+    generator = NameGenerator('Models/dinosaur.h5')
+    if not generator.is_trained():
+        generator.train(read_file('Data/dinosaur.txt'))
+        generator.save('Models/dinosaur.h5')
 
-generator = NameGenerator('Models/dinosaur.h5')
-if not generator.is_trained():
-    generator.train(read_file('Data/dinosaur.txt'))
-    generator.save('Models/dinosaur.h5')
-
-generator.generate('a')
+    print("Generated name for input 'a': {}".format(
+        generator.generate('a', deterministic=True)))
